@@ -1,6 +1,11 @@
 export function calculateRisk(code: string) {
   const lines = code.split("\n").length;
 
+  const anyCount = (code.match(/any/g) || []).length;
+  const todoCount =
+    (code.match(/TODO/g) || []).length +
+    (code.match(/FIXME/g) || []).length;
+
   const factors = {
     sizeRisk: 0,
     typeRisk: 0,
@@ -8,26 +13,19 @@ export function calculateRisk(code: string) {
     testRisk: 0
   };
 
-  // 🔹 Size risk
-  if (lines > 300) {
-    factors.sizeRisk = 0.4;
-  } else if (lines > 150) {
-    factors.sizeRisk = 0.2;
-  }
+  // 🔴 Size більш агресивний
+  if (lines > 150) factors.sizeRisk = 0.2;
+  if (lines > 300) factors.sizeRisk = 0.4;
 
-  // 🔹 Type risk
-  if (code.includes("any")) {
-    factors.typeRisk = 0.2;
-  }
+  // 🔴 Type залежить від кількості any
+  factors.typeRisk = Math.min(anyCount * 0.05, 0.3);
 
-  // 🔹 Technical debt
-  if (code.includes("TODO") || code.includes("FIXME")) {
-    factors.techDebtRisk = 0.2;
-  }
+  // 🔴 TODO залежить від кількості
+  factors.techDebtRisk = Math.min(todoCount * 0.03, 0.3);
 
-  // 🔹 Missing tests
-  if (!code.includes("test") && !code.includes("describe")) {
-    factors.testRisk = 0.3;
+  // 🔴 Відсутність тестів
+  if (!code.includes("describe") && !code.includes("it(")) {
+    factors.testRisk = 0.2;
   }
 
   const totalRisk =
@@ -37,9 +35,8 @@ export function calculateRisk(code: string) {
     factors.testRisk;
 
   return {
-    riskScore: Math.min(totalRisk, 1),
-    factors,
-    explanation: generateExplanation(factors)
+    riskScore: Number(Math.min(totalRisk, 1).toFixed(3)),
+    factors
   };
 }
 

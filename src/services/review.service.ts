@@ -3,60 +3,54 @@ import { reviewResponseSchema } from "../schemas/review-response.schema.js";
 
 export async function reviewCode(code: string, language?: string) {
 
-  // 🔵 Intelligent MOCK
-  if (process.env.MOCK === "true") {
+if (process.env.MOCK === "true") {
 
-    const issues = [];
-    const improvements = [];
+  const issues = [];
+  const improvements = [];
 
-    const lines = code.split("\n").length;
+  const lines = code.split("\n").length;
 
-    // 🔴 Type safety
-    if (code.includes("any")) {
-      issues.push({
-        title: "Unsafe type usage",
-        description: "Usage of 'any' reduces type safety.",
-        severity: "medium"
-      });
-      improvements.push("Replace 'any' with explicit types.");
-    }
-
-    // 🔴 Technical debt
-    if (code.includes("TODO") || code.includes("FIXME")) {
-      issues.push({
-        title: "Technical debt marker",
-        description: "Code contains TODO or FIXME comments.",
-        severity: "low"
-      });
-      improvements.push("Resolve TODO/FIXME comments.");
-    }
-
-    // 🔴 Large file
-    if (lines > 200) {
-      issues.push({
-        title: "Large change",
-        description: "File is large, increasing review complexity.",
-        severity: "high"
-      });
-      improvements.push("Consider splitting into smaller modules.");
-    }
-
-    // 🔴 Missing tests
-    if (!code.includes("describe") && !code.includes("it(")) {
-      issues.push({
-        title: "Missing unit tests",
-        description: "No test cases detected in the file.",
-        severity: "high"
-      });
-      improvements.push("Add unit tests for critical logic.");
-    }
-
-    return {
-      summary: "Deterministic mock review based on rule analysis.",
-      issues,
-      improvements
-    };
+  // 🔴 Type safety
+  if (code.includes("any")) {
+    issues.push({
+      title: "Unsafe type usage",
+      description: "Usage of 'any' reduces type safety.",
+      severity: "medium"
+    });
+    improvements.push("Replace 'any' with explicit types.");
   }
+
+  // 🔴 Technical debt
+  const todoCount =
+    (code.match(/TODO/g) || []).length +
+    (code.match(/FIXME/g) || []).length;
+
+  if (todoCount > 0) {
+    issues.push({
+      title: "Technical debt markers",
+      description: `Detected ${todoCount} TODO/FIXME comments.`,
+      severity: "low"
+    });
+    improvements.push("Resolve TODO/FIXME comments.");
+  }
+
+
+  // 🔴 Missing tests
+  if (!code.includes("describe") && !code.includes("it(")) {
+    issues.push({
+      title: "Missing unit tests",
+      description: "No unit tests detected.",
+      severity: "high"
+    });
+    improvements.push("Add unit tests for critical logic.");
+  }
+
+  return {
+    summary: "Advanced deterministic mock review.",
+    issues,
+    improvements
+  };
+}
 
   // 🔵 Real AI mode
   const response = await openai.responses.create({

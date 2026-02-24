@@ -9,6 +9,7 @@ type MetricEntry = {
   method?: string;
   duration?: number;
   mock?: boolean;
+  weightedIssueScore?: number;
 };
 
 export function getStats() {
@@ -34,6 +35,7 @@ export function getStats() {
     if (entry.type === "review") {
       grouped[entry.requestId].issuesCount = entry.issuesCount;
       grouped[entry.requestId].riskScore = entry.riskScore;
+      grouped[entry.requestId].weightedIssueScore = entry.weightedIssueScore;
     }
 
     if (entry.method) {
@@ -41,9 +43,12 @@ export function getStats() {
     }
   }
 
+  
+
   const sessions = Object.values(grouped).filter(
     s => s.issuesCount !== undefined && s.duration !== undefined
   );
+
 
   const totalReviews = sessions.length;
 
@@ -58,6 +63,10 @@ export function getStats() {
   const averageIssues =
     sessions.reduce((sum, s) => sum + (s.issuesCount ?? 0), 0) /
     totalReviews;
+
+    const averageWeighted =
+  sessions.reduce((sum, s) => sum + (s.weightedIssueScore ?? 0), 0) /
+  totalReviews;
 
   const averageDuration =
     sessions.reduce((sum, s) => sum + (s.duration ?? 0), 0) /
@@ -84,6 +93,51 @@ export function getStats() {
         lowRisk.length
       : 0;
 
+    // 🔵 Pearson Correlation (risk vs issues)
+
+  const risks = sessions.map(s => s.riskScore ?? 0);
+  const issues = sessions.map(s => s.issuesCount ?? 0);
+
+  const meanRisk = averageRisk;
+  const meanIssues = averageIssues;
+
+  let numerator = 0;
+  let riskVariance = 0;
+  let issuesVariance = 0;
+
+  for (let i = 0; i < sessions.length; i++) {
+    const riskDiff = risks[i] - meanRisk;
+    const issuesDiff = issues[i] - meanIssues;
+
+    numerator += riskDiff * issuesDiff;
+    riskVariance += riskDiff * riskDiff;
+    issuesVariance += issuesDiff * issuesDiff;
+  }
+
+  const denominator = Math.sqrt(riskVariance * issuesVariance);
+
+  const correlation =
+    denominator === 0 ? 0 : numerator / denominator;
+
+
+
+    const weighted = sessions.map(s => s.weightedIssueScore ?? 0);
+
+let num2 = 0;
+let weightedVar = 0;
+
+for (let i = 0; i < sessions.length; i++) {
+  const riskDiff = risks[i] - meanRisk;
+  const weightedDiff = weighted[i] - averageWeighted;
+
+  num2 += riskDiff * weightedDiff;
+  weightedVar += weightedDiff * weightedDiff;
+}
+
+const denom2 = Math.sqrt(riskVariance * weightedVar);
+
+const correlationWeighted =
+  denom2 === 0 ? 0 : num2 / denom2;
   return {
     totalReviews,
     averageRisk: Number(averageRisk.toFixed(3)),
@@ -97,6 +151,9 @@ export function getStats() {
       lowRiskCount: lowRisk.length
     },
     averageIssuesHighRisk: Number(avgIssuesHigh.toFixed(3)),
-    averageIssuesLowRisk: Number(avgIssuesLow.toFixed(3))
+    averageIssuesLowRisk: Number(avgIssuesLow.toFixed(3)),
+    correlationRiskIssues: Number(correlation.toFixed(3)),
+    averageWeightedIssues: Number(averageWeighted.toFixed(3)),
+correlationRiskWeighted: Number(correlationWeighted.toFixed(3)),
   };
 }

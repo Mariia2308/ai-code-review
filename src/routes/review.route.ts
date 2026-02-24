@@ -20,13 +20,24 @@ router.post("/", async (req, res) => {
       parsed.data.code,
       parsed.data.language
     );
+    const severityWeight = {
+  low: 1,
+  medium: 2,
+  high: 3
+};
+
+const weightedScore = result.issues.reduce((sum, issue) => {
+  return sum + severityWeight[issue.severity as keyof typeof severityWeight];
+}, 0);
 const risk = calculateRisk(parsed.data.code);
 logMetric({
   requestId: (req as any).requestId,
   type: "review",
   issuesCount: result.issues.length,
   riskScore: risk.riskScore,
+weightedIssueScore: weightedScore,
   mock: process.env.MOCK === "true"
+  
 });
     res.json({ review: result, risk });
 
