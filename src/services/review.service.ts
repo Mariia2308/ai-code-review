@@ -53,10 +53,19 @@ if (process.env.MOCK === "true") {
 }
 
   // 🔵 Real AI mode
-  const response = await openai.responses.create({
-    model: "gpt-4.1",
-    input: `
-Return ONLY valid JSON in this format:
+// 🔵 Real AI mode
+const response = await openai.responses.create({
+  model: "gpt-4.1-mini",
+  input: [
+    {
+      role: "system",
+      content: "You are a strict JSON API. You MUST return only valid JSON."
+    },
+    {
+      role: "user",
+      content: `
+Return JSON with this exact structure:
+
 {
   "summary": string,
   "issues": [
@@ -74,21 +83,17 @@ Language: ${language ?? "unknown"}
 Code:
 ${code}
 `
-  });
-
-  const raw = response.output_text;
-
-  let parsed;
-
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return {
-      summary: "AI returned invalid JSON",
-      issues: [],
-      improvements: []
-    };
+    }
+  ],
+  text: {
+    format: {
+      type: "json_object"
+    }
   }
+});
+
+const parsed = JSON.parse(response.output_text);
+
 
   const validated = reviewResponseSchema.safeParse(parsed);
 
