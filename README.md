@@ -1,40 +1,125 @@
-commit 1
-In deterministic baseline evaluation, risk score did not strongly correlate with detected issues count, indicating that heuristic alignment requires tuning.
+AI SDLC Assistant
 
-commit 2
-After decoupling heuristic risk scoring from deterministic issue generation and expanding the dataset (n=55), Pearson correlation stabilized at r ≈ 0.48, indicating moderate predictive alignment between structural risk estimation and detected quality issues.
+Simple backend prototype exploring how AI can be used in the software development lifecycle, especially for code review.
 
-# AI SDLC Assistant
+The main idea is to test whether a lightweight risk model can predict when AI review is actually needed.
 
-## Overview
-Research-driven prototype exploring AI impact on Software Development Lifecycle.
+What this project does
 
-## Features
-- AI Code Review (deterministic + LLM mode)
-- Risk Scoring Model
-- Metrics Logging with request correlation
-- Analytics Endpoint
-- Dataset Evaluation Layer
+Accepts code via API
 
-## Architecture
-- Express backend
-- Service layer separation
-- Zod validation
-- Correlated request logging
-- Deterministic baseline before LLM integration
+Calculates a structural risk score
 
-## Research Focus
-Evaluating:
-- Risk score vs detected issues correlation
-- Performance impact of AI-assisted review
-- Deterministic vs LLM comparison
+Runs code review:
 
-## Current Results (Mock Baseline)
-- Total Reviews: 34
-- Average Risk: 0.426
-- Average Issues: 1.147
+Deterministic mode (mock / rule-based)
 
-## Next Steps
-- LLM integration comparison
-- Advanced statistical correlation
-- GitHub workflow integration
+LLM mode (OpenAI)
+
+Logs metrics for each request
+
+Provides analytics (correlation, averages, latency)
+
+Uses risk-based routing to decide whether to call AI
+
+Risk Model
+
+The risk score is based on:
+
+Code size
+
+Usage of any
+
+TODO / FIXME comments
+
+Missing unit tests
+
+Risk score range: 0 – 1
+
+Based on the score:
+
+< 0.2 → Skip AI
+
+0.2 – 0.6 → Mini AI review
+
+> 0.6 → Full AI review
+
+Research Goal
+
+To evaluate:
+
+How well structural risk correlates with detected issues
+
+Whether heuristic risk can act as a pre-filter for AI
+
+The tradeoff between latency, cost, and review quality
+
+Deterministic Baseline
+
+Initial experiments showed weak correlation between risk score and detected issues.
+
+After tuning the heuristic and expanding the dataset (n=55):
+
+Pearson correlation ≈ 0.48
+
+Moderate alignment between risk score and issue count
+
+Weighted severity correlation also moderate
+
+This indicates partial predictive value without artificial alignment.
+
+LLM Integration
+
+The system integrates OpenAI (gpt-4.1-mini) for real AI-based review:
+
+Strict JSON output
+
+Schema validation with Zod
+
+Severity-based scoring
+
+This allows comparison between:
+
+Heuristic predictions
+
+Deterministic rules
+
+LLM semantic analysis
+
+Metrics Collected
+
+Total reviews
+
+Average risk
+
+Average issues
+
+Weighted issue score
+
+Pearson correlation (risk ↔ issues)
+
+Strategy breakdown (skip / mini / full)
+
+Average latency
+
+Tech Stack
+
+TypeScript
+
+Express
+
+Zod
+
+OpenAI API
+
+Custom logging + statistical evaluation
+
+Next Steps
+
+Multi-model comparison
+
+Cost-per-review analysis
+
+GitHub / CI integration
+
+Heuristic calibration using real PR data
