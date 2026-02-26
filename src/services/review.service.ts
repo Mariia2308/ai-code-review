@@ -1,7 +1,11 @@
 import { openai } from "./openai.service.js";
 import { reviewResponseSchema } from "../schemas/review-response.schema.js";
 
-export async function reviewCode(code: string, language?: string) {
+export async function reviewCode(
+  code: string,
+  language?: string,
+  mode: "mini" | "full" = "mini"
+) {
 
 if (process.env.MOCK === "true") {
 
@@ -54,8 +58,9 @@ if (process.env.MOCK === "true") {
 
   // 🔵 Real AI mode
 // 🔵 Real AI mode
+const model = mode === "full" ? "gpt-4.1" : "gpt-4.1-mini";
 const response = await openai.responses.create({
-  model: "gpt-4.1-mini",
+  model,
   input: [
     {
       role: "system",

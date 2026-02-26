@@ -23,27 +23,28 @@ router.post("/", async (req, res) => {
     let strategy: "skipped" | "mini-ai" | "full-ai";
 
     // 🔵 2. Decision Layer
-    if (risk.riskScore < 0.2) {
-      strategy = "skipped";
-
-      result = {
-        summary: "Low-risk change. AI review skipped.",
-        issues: [],
-        improvements: []
-      };
-    } else if (risk.riskScore > 0.6) {
-      strategy = "full-ai";
-      result = await reviewCode(
-        parsed.data.code,
-        parsed.data.language
-      );
-    } else {
-      strategy = "mini-ai";
-      result = await reviewCode(
-        parsed.data.code,
-        parsed.data.language
-      );
-    }
+if (risk.riskScore < 0.2) {
+  strategy = "skipped";
+  result = {
+    summary: "Low-risk change. AI review skipped.",
+    issues: [],
+    improvements: []
+  };
+} else if (risk.riskScore > 0.6) {
+  strategy = "full-ai";
+  result = await reviewCode(
+    parsed.data.code,
+    parsed.data.language,
+    "full"
+  );
+} else {
+  strategy = "mini-ai";
+  result = await reviewCode(
+    parsed.data.code,
+    parsed.data.language,
+    "mini"
+  );
+}
 
     // 🔵 3. Weighted severity
     const severityWeight = {
