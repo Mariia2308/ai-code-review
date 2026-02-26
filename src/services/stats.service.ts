@@ -10,6 +10,7 @@ type MetricEntry = {
   duration?: number;
   mock?: boolean;
   weightedIssueScore?: number;
+  strategy?: string;
 };
 
 export function getStats() {
@@ -31,12 +32,12 @@ export function getStats() {
     if (!grouped[entry.requestId]) {
       grouped[entry.requestId] = {};
     }
-
-    if (entry.type === "review") {
-      grouped[entry.requestId].issuesCount = entry.issuesCount;
-      grouped[entry.requestId].riskScore = entry.riskScore;
-      grouped[entry.requestId].weightedIssueScore = entry.weightedIssueScore;
-    }
+if (entry.type === "review") {
+  grouped[entry.requestId].issuesCount = entry.issuesCount;
+  grouped[entry.requestId].riskScore = entry.riskScore;
+  grouped[entry.requestId].weightedIssueScore = entry.weightedIssueScore;
+  grouped[entry.requestId].strategy = entry.strategy;
+}
 
     if (entry.method) {
       grouped[entry.requestId].duration = entry.duration;
@@ -48,6 +49,42 @@ export function getStats() {
   const sessions = Object.values(grouped).filter(
     s => s.issuesCount !== undefined && s.duration !== undefined
   );
+
+  const skippedCount = sessions.filter(
+  s => s.strategy === "skipped"
+).length;
+
+const miniCount = sessions.filter(
+  s => s.strategy === "mini-ai"
+).length;
+
+const fullCount = sessions.filter(
+  s => s.strategy === "full-ai"
+).length;
+
+const averageDurationSkipped =
+  skippedCount > 0
+    ? sessions
+        .filter(s => s.strategy === "skipped")
+        .reduce((sum, s) => sum + (s.duration ?? 0), 0) /
+      skippedCount
+    : 0;
+
+const averageDurationMini =
+  miniCount > 0
+    ? sessions
+        .filter(s => s.strategy === "mini-ai")
+        .reduce((sum, s) => sum + (s.duration ?? 0), 0) /
+      miniCount
+    : 0;
+
+const averageDurationFull =
+  fullCount > 0
+    ? sessions
+        .filter(s => s.strategy === "full-ai")
+        .reduce((sum, s) => sum + (s.duration ?? 0), 0) /
+      fullCount
+    : 0;
 
 
   const totalReviews = sessions.length;
@@ -155,5 +192,15 @@ const correlationWeighted =
     correlationRiskIssues: Number(correlation.toFixed(3)),
     averageWeightedIssues: Number(averageWeighted.toFixed(3)),
 correlationRiskWeighted: Number(correlationWeighted.toFixed(3)),
+strategyBreakdown: {
+  skipped: skippedCount,
+  miniAI: miniCount,
+  fullAI: fullCount
+},
+averageDurationByStrategy: {
+  skipped: Number(averageDurationSkipped.toFixed(1)),
+  miniAI: Number(averageDurationMini.toFixed(1)),
+  fullAI: Number(averageDurationFull.toFixed(1))
+},
   };
 }

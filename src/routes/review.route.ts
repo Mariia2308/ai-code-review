@@ -16,30 +16,63 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const result = await reviewCode(
-      parsed.data.code,
-      parsed.data.language
-    );
-    const severityWeight = {
-  low: 1,
-  medium: 2,
-  high: 3
-};
+    // 🔵 1. Calculate risk FIRST
+    const risk = calculateRisk(parsed.data.code);
 
-const weightedScore = result.issues.reduce((sum, issue) => {
-  return sum + severityWeight[issue.severity as keyof typeof severityWeight];
-}, 0);
-const risk = calculateRisk(parsed.data.code);
-logMetric({
-  requestId: (req as any).requestId,
-  type: "review",
-  issuesCount: result.issues.length,
-  riskScore: risk.riskScore,
-weightedIssueScore: weightedScore,
-  mock: process.env.MOCK === "true"
-  
-});
-    res.json({ review: result, risk });
+    let result;
+    let strategy: "skipped" | "mini-ai" | "full-ai";
+
+    // 🔵 2. Decision Layer
+    if (risk.riskScore < 0.2) {
+      strategy = "skipped";
+
+      result = {
+        summary: "Low-risk change. AI review skipped.",
+        issues: [],
+        improvements: []
+      };
+    } else if (risk.riskScore > 0.6) {
+      strategy = "full-ai";
+      result = await reviewCode(
+        parsed.data.code,
+        parsed.data.language
+      );
+    } else {
+      strategy = "mini-ai";
+      result = await reviewCode(
+        parsed.data.code,
+        parsed.data.language
+      );
+    }
+
+    // 🔵 3. Weighted severity
+    const severityWeight = {
+      low: 1,
+      medium: 2,
+      high: 3
+    };
+
+    const weightedScore = result.issues.reduce((sum, issue) => {
+      return (
+        sum +
+        severityWeight[
+          issue.severity as keyof typeof severityWeight
+        ]
+      );
+    }, 0);
+
+    // 🔵 4. Log with strategy
+    logMetric({
+      requestId: (req as any).requestId,
+      type: "review",
+      issuesCount: result.issues.length,
+      riskScore: risk.riskScore,
+      weightedIssueScore: weightedScore,
+      strategy,
+      mock: process.env.MOCK === "true"
+    });
+
+    res.json({ review: result, risk, strategy });
 
   } catch (error) {
     console.error(error);
