@@ -1,20 +1,21 @@
 import { openai } from "./openai.service.js";
 import { reviewResponseSchema } from "../schemas/review-response.schema.js";
+import type { ReviewResponse } from "../schemas/review-response.schema.js";
 
 export async function reviewCode(
   code: string,
   language?: string,
   mode: "mini" | "full" = "mini"
-) {
+): Promise<ReviewResponse> {
 
 if (process.env.MOCK === "true") {
 
-  const issues = [];
-  const improvements = [];
+const issues: ReviewResponse["issues"] = [];
+const improvements: string[] = [];
 
   const lines = code.split("\n").length;
 
-  // 🔴 Type safety
+
   if (code.includes("any")) {
     issues.push({
       title: "Unsafe type usage",
@@ -24,7 +25,7 @@ if (process.env.MOCK === "true") {
     improvements.push("Replace 'any' with explicit types.");
   }
 
-  // 🔴 Technical debt
+
   const todoCount =
     (code.match(/TODO/g) || []).length +
     (code.match(/FIXME/g) || []).length;
@@ -38,8 +39,6 @@ if (process.env.MOCK === "true") {
     improvements.push("Resolve TODO/FIXME comments.");
   }
 
-
-  // 🔴 Missing tests
   if (!code.includes("describe") && !code.includes("it(")) {
     issues.push({
       title: "Missing unit tests",
@@ -56,8 +55,6 @@ if (process.env.MOCK === "true") {
   };
 }
 
-  // 🔵 Real AI mode
-// 🔵 Real AI mode
 const model = mode === "full" ? "gpt-4.1" : "gpt-4.1-mini";
 const response = await openai.responses.create({
   model,

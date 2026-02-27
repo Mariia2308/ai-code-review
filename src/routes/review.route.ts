@@ -3,10 +3,13 @@ import { reviewSchema } from "../schemas/review.schema.js";
 import { reviewCode } from "../services/review.service.js";
 import { calculateRisk } from "../services/risk.service.js";
 import { logMetric } from "../utils/metrics.js";
+import { calculateWeightedScore } from "../utils/severity.js";
+import { decideStrategy } from "../utils/strategy.js";
+import { skippedReview } from "../utils/review-templates.js";
 
 const router = Router();
 
-router.post("/", async (req, res) => {
+router.post("/", async (req, res, next) => {
   try {
     const parsed = reviewSchema.safeParse(req.body);
 
@@ -16,68 +19,47 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // 🔵 1. Calculate risk FIRST
-    const risk = calculateRisk(parsed.data.code);
+    const { code, language } = parsed.data;
 
-    let result;
-    let strategy: "skipped" | "mini-ai" | "full-ai";
+    // 1️⃣ Calculate structural risk
+    const risk = calculateRisk(code);
 
-    // 🔵 2. Decision Layer
-if (risk.riskScore < 0.2) {
-  strategy = "skipped";
-  result = {
-    summary: "Low-risk change. AI review skipped.",
-    issues: [],
-    improvements: []
-  };
-} else if (risk.riskScore > 0.6) {
-  strategy = "full-ai";
-  result = await reviewCode(
-    parsed.data.code,
-    parsed.data.language,
-    "full"
-  );
-} else {
-  strategy = "mini-ai";
-  result = await reviewCode(
-    parsed.data.code,
-    parsed.data.language,
-    "mini"
-  );
-}
+    // 2️⃣ Decide routing strategy
+    const strategy = decideStrategy(risk.riskScore);
 
-    // 🔵 3. Weighted severity
-    const severityWeight = {
-      low: 1,
-      medium: 2,
-      high: 3
-    };
+    // 3️⃣ Execute review based on strategy
+    let review;
 
-    const weightedScore = result.issues.reduce((sum, issue) => {
-      return (
-        sum +
-        severityWeight[
-          issue.severity as keyof typeof severityWeight
-        ]
-      );
-    }, 0);
+    if (strategy === "skipped") {
+      review = skippedReview();
+    } else if (strategy === "full-ai") {
+      review = await reviewCode(code, language, "full");
+    } else {
+      review = await reviewCode(code, language, "mini");
+    }
 
-    // 🔵 4. Log with strategy
+
+    const weightedScore = calculateWeightedScore(review.issues);
+
     logMetric({
       requestId: (req as any).requestId,
       type: "review",
-      issuesCount: result.issues.length,
+      issuesCount: review.issues.length,
       riskScore: risk.riskScore,
       weightedIssueScore: weightedScore,
       strategy,
       mock: process.env.MOCK === "true"
     });
 
-    res.json({ review: result, risk, strategy });
+
+    res.json({
+      review,
+      risk,
+      strategy
+    });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    next(error); 
   }
 });
 

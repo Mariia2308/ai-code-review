@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 
-app.use(requestIdMiddleware); // requestId має бути першим
+app.use(requestIdMiddleware);
 app.use(loggerMiddleware);
 
 app.get("/", (_req, res) => {
