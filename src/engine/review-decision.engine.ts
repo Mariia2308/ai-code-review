@@ -3,7 +3,7 @@ import { reviewCode } from "../services/review.service.js";
 import { calculateWeightedScore } from "../utils/severity.js";
 import type { ReviewResponse } from "../schemas/review-response.schema.js";
 import { RISK_THRESHOLDS } from "../config/risk-config.js";
-export type ReviewStrategy = "skipped" | "mini-ai" | "full-ai";
+import type { ReviewStrategy } from "./strategy.js";
 
 export type DecisionResult = {
   review: ReviewResponse;
