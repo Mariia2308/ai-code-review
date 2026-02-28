@@ -100,6 +100,7 @@ const parsed = JSON.parse(response.output_text);
   const validated = reviewResponseSchema.safeParse(parsed);
 
   if (!validated.success) {
+    console.error("Invalid AI JSON:", response.output_text);
     return {
       summary: "AI JSON did not match schema",
       issues: [],
