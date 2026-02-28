@@ -33,7 +33,7 @@ if (risk.riskScore < 0.2) {
   strategy = "full-ai";
   review = await reviewCode(code, language, "full");
 } else {
-  // 🔬 A/B experiment
+
   const random = Math.random();
 
   if (random < 0.5) {
