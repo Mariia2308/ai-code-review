@@ -17,25 +17,33 @@ export async function executeReviewDecision(
   language?: string
 ): Promise<DecisionResult> {
 
-  const risk = calculateRisk(code);
+const risk = calculateRisk(code);
 
-  let review: ReviewResponse;
-  let strategy: ReviewStrategy;
+let review: ReviewResponse;
+let strategy: ReviewStrategy;
 
-  if (risk.riskScore < 0.2) {
-    strategy = "skipped";
-    review = {
-      summary: "Low-risk change. AI review skipped.",
-      issues: [],
-      improvements: []
-    };
-  } else if (risk.riskScore > 0.6) {
-    strategy = "full-ai";
-    review = await reviewCode(code, language, "full");
-  } else {
+if (risk.riskScore < 0.2) {
+  strategy = "skipped";
+  review = {
+    summary: "Low-risk change. AI review skipped.",
+    issues: [],
+    improvements: []
+  };
+} else if (risk.riskScore > 0.6) {
+  strategy = "full-ai";
+  review = await reviewCode(code, language, "full");
+} else {
+  // 🔬 A/B experiment
+  const random = Math.random();
+
+  if (random < 0.5) {
     strategy = "mini-ai";
     review = await reviewCode(code, language, "mini");
+  } else {
+    strategy = "full-ai";
+    review = await reviewCode(code, language, "full");
   }
+}
 
   const weightedScore = calculateWeightedScore(review.issues);
 
