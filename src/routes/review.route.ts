@@ -1,11 +1,7 @@
 import { Router } from "express";
 import { reviewSchema } from "../schemas/review.schema.js";
-import { reviewCode } from "../services/review.service.js";
-import { calculateRisk } from "../services/risk.service.js";
 import { logMetric } from "../utils/metrics.js";
-import { calculateWeightedScore } from "../utils/severity.js";
-import { decideStrategy } from "../utils/strategy.js";
-import { skippedReview } from "../utils/review-templates.js";
+import { executeReviewDecision } from "../engine/review-decision.engine.js";
 
 const router = Router();
 
@@ -21,28 +17,11 @@ router.post("/", async (req, res, next) => {
 
     const { code, language } = parsed.data;
 
-    // 1️⃣ Calculate structural risk
-    const risk = calculateRisk(code);
-
-    // 2️⃣ Decide routing strategy
-    const strategy = decideStrategy(risk.riskScore);
-
-    // 3️⃣ Execute review based on strategy
-    let review;
-
-    if (strategy === "skipped") {
-      review = skippedReview();
-    } else if (strategy === "full-ai") {
-      review = await reviewCode(code, language, "full");
-    } else {
-      review = await reviewCode(code, language, "mini");
-    }
-
-
-    const weightedScore = calculateWeightedScore(review.issues);
+    const { review, risk, strategy, weightedScore } =
+      await executeReviewDecision(code, language);
 
     logMetric({
-      requestId: (req as any).requestId,
+      requestId: req.requestId,
       type: "review",
       issuesCount: review.issues.length,
       riskScore: risk.riskScore,
@@ -51,15 +30,16 @@ router.post("/", async (req, res, next) => {
       mock: process.env.MOCK === "true"
     });
 
-
     res.json({
       review,
       risk,
-      strategy
+      strategy,
+      weightedScore,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    next(error); 
+    next(error);
   }
 });
 
