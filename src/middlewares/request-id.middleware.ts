@@ -1,14 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import crypto from "crypto";
+import { randomUUID } from "crypto";
 
 export function requestIdMiddleware(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) {
-  const id = crypto.randomUUID();
-
-  (req as any).requestId = id;
-
+  req.requestId = randomUUID();
   next();
 }
