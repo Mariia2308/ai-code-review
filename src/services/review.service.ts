@@ -1,7 +1,7 @@
 import { openai } from "./openai.service.js";
 import { reviewResponseSchema } from "../schemas/review-response.schema.js";
 import type { ReviewResponse } from "../schemas/review-response.schema.js";
-
+import { AI_MODELS } from "../config/ai-config.js";
 export async function reviewCode(
   code: string,
   language?: string,
@@ -55,7 +55,7 @@ const improvements: string[] = [];
   };
 }
 
-const model = mode === "full" ? "gpt-4.1" : "gpt-4.1-mini";
+const model = AI_MODELS[mode];
 const response = await openai.responses.create({
   model,
   input: [
