@@ -1,4 +1,5 @@
 import fs from "fs";
+import { pearson } from "../utils/math.js";
 
 type MetricEntry = {
   timestamp: string;
@@ -131,50 +132,12 @@ const averageDurationFull =
       : 0;
 
     // 🔵 Pearson Correlation (risk vs issues)
+const risks = sessions.map(s => s.riskScore ?? 0);
+const issues = sessions.map(s => s.issuesCount ?? 0);
+const weighted = sessions.map(s => s.weightedIssueScore ?? 0);
 
-  const risks = sessions.map(s => s.riskScore ?? 0);
-  const issues = sessions.map(s => s.issuesCount ?? 0);
-
-  const meanRisk = averageRisk;
-  const meanIssues = averageIssues;
-
-  let numerator = 0;
-  let riskVariance = 0;
-  let issuesVariance = 0;
-
-  for (let i = 0; i < sessions.length; i++) {
-    const riskDiff = risks[i] - meanRisk;
-    const issuesDiff = issues[i] - meanIssues;
-
-    numerator += riskDiff * issuesDiff;
-    riskVariance += riskDiff * riskDiff;
-    issuesVariance += issuesDiff * issuesDiff;
-  }
-
-  const denominator = Math.sqrt(riskVariance * issuesVariance);
-
-  const correlation =
-    denominator === 0 ? 0 : numerator / denominator;
-
-
-
-    const weighted = sessions.map(s => s.weightedIssueScore ?? 0);
-
-let num2 = 0;
-let weightedVar = 0;
-
-for (let i = 0; i < sessions.length; i++) {
-  const riskDiff = risks[i] - meanRisk;
-  const weightedDiff = weighted[i] - averageWeighted;
-
-  num2 += riskDiff * weightedDiff;
-  weightedVar += weightedDiff * weightedDiff;
-}
-
-const denom2 = Math.sqrt(riskVariance * weightedVar);
-
-const correlationWeighted =
-  denom2 === 0 ? 0 : num2 / denom2;
+const correlation = pearson(risks, issues);
+const correlationWeighted = pearson(risks, weighted);
   return {
     totalReviews,
     averageRisk: Number(averageRisk.toFixed(3)),
