@@ -3,9 +3,13 @@ import { getStats } from "../services/stats.service.js";
 
 const router = Router();
 
-router.get("/", (_req, res) => {
-  const stats = getStats();
-  res.json(stats);
+router.get("/", async (_req, res, next) => {
+  try {
+    const stats = await getStats();
+    res.json(stats);
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

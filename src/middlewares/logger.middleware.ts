@@ -20,8 +20,9 @@ export function loggerMiddleware(
       mock: process.env.MOCK === "true"
     };
 
-    // запис у файл
-    logMetric(entry);
+    // запис у файл]
+    logMetric(entry).catch(console.error);
+
 
     // лог у консоль
     console.log(

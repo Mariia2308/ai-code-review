@@ -20,7 +20,7 @@ router.post("/", async (req, res, next) => {
     const { review, risk, strategy, weightedScore } =
       await executeReviewDecision(code, language);
 
-    logMetric({
+    await logMetric({
       requestId: req.requestId,
       type: "review",
       issuesCount: review.issues.length,
