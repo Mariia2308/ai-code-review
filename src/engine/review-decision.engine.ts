@@ -5,7 +5,7 @@ import type { ReviewResponse } from "../schemas/review-response.schema.js";
 import { decideStrategy } from "./strategy.js";
 import { skippedReview } from "./review-templates.js";
 import type { ReviewStrategy } from "./strategy.js";
-
+import { hashToUnit } from "../utils/hash.js";
 export type DecisionResult = {
   review: ReviewResponse;
   risk: ReturnType<typeof calculateRisk>;
@@ -34,9 +34,8 @@ export async function executeReviewDecision(
     review = await reviewCode(code, language, "full");
 
   } else {
-    const random = Math.random();
-
-    if (random < 0.5) {
+const bucket = hashToUnit(code);
+if (bucket < 0.5) {
       strategy = "mini-ai";
       review = await reviewCode(code, language, "mini");
     } else {
