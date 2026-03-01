@@ -2,7 +2,8 @@ import { calculateRisk } from "../services/risk.service.js";
 import { reviewCode } from "../services/review.service.js";
 import { calculateWeightedScore } from "../utils/severity.js";
 import type { ReviewResponse } from "../schemas/review-response.schema.js";
-import { RISK_THRESHOLDS } from "../config/risk-config.js";
+import { decideStrategy } from "./strategy.js";
+import { skippedReview } from "./review-templates.js";
 import type { ReviewStrategy } from "./strategy.js";
 
 export type DecisionResult = {
@@ -17,33 +18,32 @@ export async function executeReviewDecision(
   language?: string
 ): Promise<DecisionResult> {
 
-const risk = calculateRisk(code);
+  const risk = calculateRisk(code);
 
-let review: ReviewResponse;
-let strategy: ReviewStrategy;
+  let review: ReviewResponse;
+  let strategy: ReviewStrategy;
 
-if (risk.riskScore < 0.2) {
-  strategy = "skipped";
-  review = {
-    summary: "Low-risk change. AI review skipped.",
-    issues: [],
-    improvements: []
-  };
-} else if (risk.riskScore > RISK_THRESHOLDS.full){
-  strategy = "full-ai";
-  review = await reviewCode(code, language, "full");
-} else {
-  
-  const random = Math.random();
+  const baseStrategy = decideStrategy(risk.riskScore);
 
-  if (random < 0.5) {
-    strategy = "mini-ai";
-    review = await reviewCode(code, language, "mini");
-  } else {
+  if (baseStrategy === "skipped") {
+    strategy = "skipped";
+    review = skippedReview();
+
+  } else if (baseStrategy === "full-ai") {
     strategy = "full-ai";
     review = await reviewCode(code, language, "full");
+
+  } else {
+    const random = Math.random();
+
+    if (random < 0.5) {
+      strategy = "mini-ai";
+      review = await reviewCode(code, language, "mini");
+    } else {
+      strategy = "full-ai";
+      review = await reviewCode(code, language, "full");
+    }
   }
-}
 
   const weightedScore = calculateWeightedScore(review.issues);
 
