@@ -1,4 +1,4 @@
-import { openai } from "./openai.service.js";
+import { getOpenAI } from "./openai.service.js";
 import { reviewResponseSchema } from "../schemas/review-response.schema.js";
 import type { ReviewResponse } from "../schemas/review-response.schema.js";
 import { AI_MODELS } from "../config/ai-config.js";
@@ -56,6 +56,7 @@ const improvements: string[] = [];
 }
 
 const model = AI_MODELS[mode];
+const openai = getOpenAI();
 const response = await openai.responses.create({
   model,
   input: [
