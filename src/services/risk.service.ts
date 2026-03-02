@@ -1,10 +1,18 @@
+import { RISK_HEURISTICS } from "../config/risk-heuristics.js";
+
 export function calculateRisk(code: string) {
   const lines = code.split("\n").length;
 
-  const anyCount = (code.match(/any/g) || []).length;
+  const anyCount = (code.match(/\bany\b/g) || []).length;
   const todoCount =
     (code.match(/TODO/g) || []).length +
     (code.match(/FIXME/g) || []).length;
+
+  const {
+    SIZE_THRESHOLDS,
+    WEIGHTS,
+    CAPS
+  } = RISK_HEURISTICS;
 
   const factors = {
     sizeRisk: 0,
@@ -13,19 +21,30 @@ export function calculateRisk(code: string) {
     testRisk: 0
   };
 
-  // 🔴 Size більш агресивний
-  if (lines > 150) factors.sizeRisk = 0.2;
-  if (lines > 300) factors.sizeRisk = 0.4;
+  // ---- SIZE RISK ----
+  if (lines > SIZE_THRESHOLDS.MEDIUM) {
+    factors.sizeRisk = WEIGHTS.SIZE_MEDIUM;
+  }
 
-  // 🔴 Type залежить від кількості any
-  factors.typeRisk = Math.min(anyCount * 0.05, 0.3);
+  if (lines > SIZE_THRESHOLDS.LARGE) {
+    factors.sizeRisk = WEIGHTS.SIZE_LARGE;
+  }
 
-  // 🔴 TODO залежить від кількості
-  factors.techDebtRisk = Math.min(todoCount * 0.03, 0.3);
+  // ---- TYPE RISK ----
+  factors.typeRisk = Math.min(
+    anyCount * WEIGHTS.TYPE_ANY,
+    CAPS.TYPE
+  );
 
-  // 🔴 Відсутність тестів
+  // ---- TECH DEBT ----
+  factors.techDebtRisk = Math.min(
+    todoCount * WEIGHTS.TECH_DEBT,
+    CAPS.TECH_DEBT
+  );
+
+  // ---- TEST COVERAGE ----
   if (!code.includes("describe") && !code.includes("it(")) {
-    factors.testRisk = 0.2;
+    factors.testRisk = WEIGHTS.MISSING_TESTS;
   }
 
   const totalRisk =
@@ -38,26 +57,4 @@ export function calculateRisk(code: string) {
     riskScore: Number(Math.min(totalRisk, 1).toFixed(3)),
     factors
   };
-}
-
-function generateExplanation(factors: any) {
-  const reasons = [];
-
-  if (factors.sizeRisk > 0) {
-    reasons.push("Large code change increases review complexity.");
-  }
-
-  if (factors.typeRisk > 0) {
-    reasons.push("Usage of 'any' reduces type safety.");
-  }
-
-  if (factors.techDebtRisk > 0) {
-    reasons.push("Code contains TODO or FIXME markers.");
-  }
-
-  if (factors.testRisk > 0) {
-    reasons.push("No evidence of unit tests detected.");
-  }
-
-  return reasons;
 }

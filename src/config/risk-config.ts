@@ -9,3 +9,7 @@ export const RISK_MODEL_CONFIG = {
   anyWeight: 0.2,
   missingTestsWeight: 0.3
 };
+
+export const AB_TEST_CONFIG = {
+  miniTrafficRatio: 0.5
+} as const;
