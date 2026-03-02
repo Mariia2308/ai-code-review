@@ -1,16 +1,20 @@
 import { Request, Response, NextFunction } from "express";
 
 export function errorMiddleware(
-  err: any,
-  req: Request,
+  err: unknown,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) {
-  console.error("Global error:", err);
+  console.error(err);
+
+  if (err instanceof Error) {
+    return res.status(500).json({
+      error: err.message
+    });
+  }
 
   res.status(500).json({
-    error: "Something went wrong",
-    message:
-      process.env.NODE_ENV === "development" ? err.message : undefined
+    error: "Unknown error"
   });
 }

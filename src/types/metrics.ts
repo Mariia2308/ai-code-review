@@ -1,5 +1,4 @@
-export type ReviewStrategy = "skipped" | "mini-ai" | "full-ai";
-
+import type { ReviewStrategy } from "../engine/strategy.js";
 export type MetricEntry = {
   timestamp: string;
   requestId: string;
