@@ -1,4 +1,4 @@
-import { openai } from "./openai.service.js";
+import { getOpenAI } from "./openai.service.js";
 
 export async function generateTests(code: string, language?: string) {
 
@@ -22,8 +22,8 @@ describe("sum", () => {
 `
     };
   }
-
-  const response = await openai.responses.create({
+const openai = getOpenAI();
+const response = await openai.responses.create({
     model: "gpt-4.1-mini",
     input: `
 You are a senior engineer.

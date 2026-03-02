@@ -17,6 +17,7 @@ app.use(express.json());
 app.use(requestIdMiddleware);
 app.use(loggerMiddleware);
 
+app.use(express.json({ limit: "200kb" }));
 app.get("/", (_req, res) => {
   res.json({ status: "AI SDLC Assistant running" });
 });

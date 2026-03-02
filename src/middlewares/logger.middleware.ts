@@ -11,23 +11,11 @@ export function loggerMiddleware(
   res.on("finish", () => {
     const duration = Date.now() - start;
 
-    const entry = {
-      requestId: (req as any).requestId,
+    logMetric({
+      requestId: req.requestId,
       method: req.method,
-      path: req.originalUrl,
-      status: res.statusCode,
-      duration,
-      mock: process.env.MOCK === "true"
-    };
-
-    // запис у файл]
-    logMetric(entry).catch(console.error);
-
-
-    // лог у консоль
-    console.log(
-      `[${(req as any).requestId}] ${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`
-    );
+      duration
+    }).catch(console.error);
   });
 
   next();
