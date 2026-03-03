@@ -1,32 +1,19 @@
 import { Router } from "express";
 import { testgenSchema } from "../schemas/testgen.schema.js";
-import type { TestGenInput } from "../schemas/testgen.schema.js";
 import { generateTests } from "../services/testgen.service.js";
 
 const router = Router();
 
-router.post("/", async (req, res) => {
+router.post("/", async (req, res, next) => {
   try {
-const parsed = testgenSchema.safeParse(req.body);
+    const { code, language } = testgenSchema.parse(req.body);
 
-if (!parsed.success) {
-  return res.status(400).json({
-    error: parsed.error.flatten()
-  });
-}
-
-const { code, language } = parsed.data as TestGenInput;
-
-    const result = await generateTests(
-      parsed.data.code,
-      parsed.data.language
-    );
+    const result = await generateTests(code, language);
 
     res.json(result);
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    next(error);
   }
 });
 

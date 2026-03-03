@@ -7,15 +7,7 @@ const router = Router();
 
 router.post("/", async (req, res, next) => {
   try {
-    const parsed = reviewSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: parsed.error.flatten()
-      });
-    }
-
-    const { code, language } = parsed.data;
+    const { code, language } = reviewSchema.parse(req.body);
 
     const { review, risk, strategy, weightedScore } =
       await executeReviewDecision(code, language);
