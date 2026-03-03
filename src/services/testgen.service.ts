@@ -1,9 +1,9 @@
 import { getOpenAI } from "./openai.service.js";
-import { CONFIG } from "../config/env.js";
+import { getConfig } from "../config/env.js";
 export async function generateTests(code: string, language?: string) {
 
   // ✅ MOCK режим
-  if (CONFIG.mock) {
+  if (getConfig().mock) {
     return {
       testFramework: "vitest",
       tests: `

@@ -14,25 +14,35 @@ type MetricEntry = {
   strategy?: string;
 };
 
-export async function getStats() {
-  let data: string;
+type Session = {
+  issuesCount: number;
+  riskScore: number;
+  duration: number;
+  weightedIssueScore: number;
+  strategy?: string;
+};
 
+async function readMetrics(): Promise<MetricEntry[]> {
   try {
-    data = await fs.readFile("metrics.log", "utf-8");
+    const data = await fs.readFile("metrics.log", "utf-8");
+
+    return data
+      .split("\n")
+      .filter(Boolean)
+      .map(line => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as MetricEntry[];
   } catch {
-    return { totalReviews: 0 };
+    return [];
   }
+}
 
-  const lines = data.split("\n").filter(Boolean);
-
-  const entries: MetricEntry[] = lines.map(line => {
-    try {
-      return JSON.parse(line);
-    } catch {
-      return null;
-    }
-  }).filter(Boolean) as MetricEntry[];
-
+function groupSessions(entries: MetricEntry[]): Session[] {
   const grouped: Record<string, Partial<MetricEntry>> = {};
 
   for (const entry of entries) {
@@ -45,7 +55,8 @@ export async function getStats() {
     if (entry.type === "review") {
       grouped[entry.requestId].issuesCount = entry.issuesCount;
       grouped[entry.requestId].riskScore = entry.riskScore;
-      grouped[entry.requestId].weightedIssueScore = entry.weightedIssueScore;
+      grouped[entry.requestId].weightedIssueScore =
+        entry.weightedIssueScore;
       grouped[entry.requestId].strategy = entry.strategy;
     }
 
@@ -54,19 +65,47 @@ export async function getStats() {
     }
   }
 
-  const sessions = Object.values(grouped).filter(
-    s => s.issuesCount !== undefined &&
-         s.duration !== undefined &&
-         s.riskScore !== undefined
-  );
+  return Object.values(grouped)
+    .filter(
+      s =>
+        s.issuesCount !== undefined &&
+        s.riskScore !== undefined &&
+        s.duration !== undefined
+    )
+    .map(s => ({
+      issuesCount: s.issuesCount!,
+      riskScore: s.riskScore!,
+      duration: s.duration!,
+      weightedIssueScore: s.weightedIssueScore ?? 0,
+      strategy: s.strategy
+    }));
+}
 
+function average(numbers: number[]): number {
+  if (!numbers.length) return 0;
+  return numbers.reduce((a, b) => a + b, 0) / numbers.length;
+}
+
+function averageDuration(sessions: Session[]): number {
+  return average(sessions.map(s => s.duration));
+}
+
+function buildAggregates(sessions: Session[]) {
   const totalReviews = sessions.length;
 
   if (totalReviews === 0) {
     return { totalReviews: 0 };
   }
 
+  const risks = sessions.map(s => s.riskScore);
+  const issues = sessions.map(s => s.issuesCount);
+  const weighted = sessions.map(s => s.weightedIssueScore);
 
+  const highRisk = sessions.filter(s => s.riskScore > 0.6);
+  const mediumRisk = sessions.filter(
+    s => s.riskScore > 0.3 && s.riskScore <= 0.6
+  );
+  const lowRisk = sessions.filter(s => s.riskScore <= 0.3);
 
   const byStrategy = (name: string) =>
     sessions.filter(s => s.strategy === name);
@@ -75,45 +114,15 @@ export async function getStats() {
   const mini = byStrategy("mini-ai");
   const full = byStrategy("full-ai");
 
-  const avgDuration = (arr: typeof sessions) =>
-    arr.length
-      ? arr.reduce((sum, s) => sum + (s.duration ?? 0), 0) / arr.length
-      : 0;
-
-
-  const risks = sessions.map(s => s.riskScore!);
-  const issues = sessions.map(s => s.issuesCount!);
-  const weighted = sessions.map(s => s.weightedIssueScore ?? 0);
-
-  const averageRisk =
-    risks.reduce((a, b) => a + b, 0) / totalReviews;
-
-  const averageIssues =
-    issues.reduce((a, b) => a + b, 0) / totalReviews;
-
-  const averageWeighted =
-    weighted.reduce((a, b) => a + b, 0) / totalReviews;
-
-  const averageDurationAll =
-    sessions.reduce((sum, s) => sum + (s.duration ?? 0), 0) /
-    totalReviews;
-
-  const highRisk = sessions.filter(s => s.riskScore! > 0.6);
-  const mediumRisk = sessions.filter(
-    s => s.riskScore! > 0.3 && s.riskScore! <= 0.6
-  );
-  const lowRisk = sessions.filter(s => s.riskScore! <= 0.3);
-
-  const correlation = pearson(risks, issues);
-  const correlationWeighted = pearson(risks, weighted);
-
   return {
     totalReviews,
 
-    averageRisk: Number(averageRisk.toFixed(3)),
-    averageIssues: Number(averageIssues.toFixed(3)),
-    averageWeightedIssues: Number(averageWeighted.toFixed(3)),
-    averageDuration: Number(averageDurationAll.toFixed(1)),
+    averageRisk: Number(average(risks).toFixed(3)),
+    averageIssues: Number(average(issues).toFixed(3)),
+    averageWeightedIssues: Number(average(weighted).toFixed(3)),
+    averageDuration: Number(
+      averageDuration(sessions).toFixed(1)
+    ),
 
     maxRisk: Math.max(...risks),
     maxIssues: Math.max(...issues),
@@ -124,8 +133,12 @@ export async function getStats() {
       lowRiskCount: lowRisk.length
     },
 
-    correlationRiskIssues: Number(correlation.toFixed(3)),
-    correlationRiskWeighted: Number(correlationWeighted.toFixed(3)),
+    correlationRiskIssues: Number(
+      pearson(risks, issues).toFixed(3)
+    ),
+    correlationRiskWeighted: Number(
+      pearson(risks, weighted).toFixed(3)
+    ),
 
     strategyBreakdown: {
       skipped: skipped.length,
@@ -134,9 +147,21 @@ export async function getStats() {
     },
 
     averageDurationByStrategy: {
-      skipped: Number(avgDuration(skipped).toFixed(1)),
-      miniAI: Number(avgDuration(mini).toFixed(1)),
-      fullAI: Number(avgDuration(full).toFixed(1))
+      skipped: Number(
+        averageDuration(skipped).toFixed(1)
+      ),
+      miniAI: Number(
+        averageDuration(mini).toFixed(1)
+      ),
+      fullAI: Number(
+        averageDuration(full).toFixed(1)
+      )
     }
   };
+}
+
+export async function getStats() {
+  const entries = await readMetrics();
+  const sessions = groupSessions(entries);
+  return buildAggregates(sessions);
 }
