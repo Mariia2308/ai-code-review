@@ -131,5 +131,5 @@ This project demonstrates that:
 Simple static heuristics can approximate AI review likelihood
 Deterministic routing enables controlled cost optimization
 Statistical instrumentation is essential for evaluating AI system design
-**
-The system is designed as a research backend for AI-assisted SDLC optimization.**
+
+The system is designed as a research backend for AI-assisted SDLC optimization.
